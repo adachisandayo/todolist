@@ -1,134 +1,142 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from sqlalchemy.orm import joinedload
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, Integer, String, Table, ForeignKey
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.future import select
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///my_database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# CORS設定
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-db = SQLAlchemy(app)
+# DB設定
+DATABASE_URL = "sqlite+aiosqlite:///./my_database.db"  # 非同期対応のSQLite URL
+engine = create_async_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
 
-class Item(db.Model):
+Base = declarative_base()
+
+item_category_table = Table(
+    "item_category", Base.metadata,
+    Column("item_id", Integer, ForeignKey("item.id"), primary_key=True),
+    Column("category_id", Integer, ForeignKey("category.id"), primary_key=True)
+)
+
+class Item(Base):
     __tablename__ = "item"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-   
-    categories = db.relationship("Category", secondary="item_category", back_populates="items")
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    categories = relationship("Category", secondary=item_category_table, back_populates="items")
 
-    def __init__(self, name):
-        self.name = name
-        
-    def __repr__(self):
-        return f'<Item {self.name}>'
-
-class Category(db.Model):
+class Category(Base):
     __tablename__ = "category"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-
-    items = db.relationship("Item", secondary="item_category", back_populates="categories")
-
-class ItemCategory(db.Model):
-    __tablename__ = "item_category"
-    item_id = db.Column(db.Integer, db.ForeignKey("item.id"), primary_key=True)
-    category_id = db.Column(db.Integer, db.ForeignKey("category.id"), primary_key=True)
-
-# db.create_all()
-
-@app.route('/')
-def hello():
-    return "Hello from Flask!"
-
-@app.route('/items', methods=['GET'])
-def get_items():
-    # items = Item.query.all()
-    # item_dict={}
-    # for item in items:
-        # item_dict[item.id] = str(item.name)
-        # item_dict[item.id] = {'name':str(item.name), '':str(item.create_time)}
-    items = Item.query.options(joinedload(Item.categories)).all()
-    print(items)
-    item_list = []
-    for item in items:
-        # print(item.id)
-        categories = [category.name for category in item.categories]
-        item_list.append({
-            'id': item.id,
-            'name': item.name,
-            'categories': categories
-        })
-    print(item_list)
-    return jsonify(item_list)
-
-@app.route('/items', methods=['POST'])
-def add_item():
-    name = request.json['name']
-    item = Item(name=name)
-    db.session.add(item)
-    db.session.commit()
-    
-    return jsonify({"message":"Item added successfully."}), 201
-
-@app.route('/items/<int:id>', methods=['DELETE'])
-def delete_item(id):
-    item = Item.query.get(id)
-    if not item:
-        return jsonify({"error": "Item not found"}), 402
-    db.session.delete(item)
-    db.session.commit()
-    return jsonify({"message":"Item deleted successfully."}), 201
-
-@app.route('/items/<int:id>', methods=['PUT'])
-def put_item(id):
-    name = request.json['name']
-    item = Item.query.get(id)
-    if not item:
-        return jsonify({"error": "Item not found"}), 402
-    db.session.merge(item)
-
-    item.name = name
-    db.session.commit()
-    return jsonify({"message":"Item updated successfully."}), 200
-
-@app.route('/categories', methods=['GET'])
-def get_categories():
-    categories = Category.query.all()
-    category_dict={}
-    for category in categories:
-        category_dict[category.id] = str(category.name)
-    return jsonify(category_dict)
-
-@app.route('/categories', methods=['POST'])
-def add_category():
-    name = request.json['name']
-    category = Category(name=name)
-    db.session.add(category)
-    db.session.commit()
-    return jsonify({"message":"Category added successfully."}), 200
-
-@app.route('/categories/<int:id>', methods=['DELETE'])
-def delete_category(id):
-    category = Category.query.get(id)
-    if not category:
-        return jsonify({"error": "category not found"}), 402
-    db.session.delete(category)
-    db.session.commit()
-
-    return jsonify({"message":"Category deleted successfully."}), 201
-
-@app.route('/itemcategory', methods=['POST'])
-def add_itemcategory():
-    item_id = request.json['item_id']
-    category_id = request.json['category_id']
-    newinstance = ItemCategory(item_id=item_id, category_id=category_id)
-    db.session.add(newinstance)
-    db.session.commit()
-    return jsonify({"message":"tag added successfully."}), 200
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    items = relationship("Item", secondary=item_category_table, back_populates="categories")
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Pydanticモデル
+class ItemCreate(BaseModel):
+    name: str
+
+class CategoryCreate(BaseModel):
+    name: str
+
+# DBセッションを取得する依存関係
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
+
+# ルート
+@app.get("/")
+async def root():
+    return {"message": "Hello from FastAPI!"}
+
+# 非同期処理を使用したGETリクエスト
+@app.get("/items")
+async def get_items(db: AsyncSession = Depends(get_db)):
+    async with db as session:
+        result = await session.execute(select(Item).options(joinedload(Item.categories)))
+        items = result.scalars().all()
+        item_list = [
+            {"id": item.id, "name": item.name, "categories": [category.name for category in item.categories]}
+            for item in items
+        ]
+        return item_list
+
+# 非同期処理を使用したPOSTリクエスト
+@app.post("/items", status_code=201)
+async def add_item(item: ItemCreate, db: AsyncSession = Depends(get_db)):
+    new_item = Item(name=item.name)
+    db.add(new_item)
+    await db.commit()
+    return {"message": "Item added successfully."}
+
+# 同期/非同期対応の削除リクエスト
+@app.delete("/items/{id}", status_code=200)
+async def delete_item(id: int, db: AsyncSession = get_db()):
+    async with db as session:
+        item = await session.get(Item, id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Item not found")
+        await session.delete(item)
+        await session.commit()
+        return {"message": "Item deleted successfully."}
+
+# 更新処理
+@app.put("/items/{id}", status_code=200)
+async def update_item(id: int, item: ItemCreate, db: AsyncSession = get_db()):
+    async with db as session:
+        existing_item = await session.get(Item, id)
+        if not existing_item:
+            raise HTTPException(status_code=404, detail="Item not found")
+        existing_item.name = item.name
+        await session.commit()
+        return {"message": "Item updated successfully."}
+
+# カテゴリ関連のルート
+@app.get("/categories")
+async def get_categories(db: AsyncSession = get_db()):
+    async with db as session:
+        result = await session.execute(select(Category))
+        categories = result.scalars().all()
+        category_dict = {category.id: category.name for category in categories}
+        return category_dict
+
+@app.post("/categories", status_code=201)
+async def add_category(category: CategoryCreate, db: AsyncSession = get_db()):
+    new_category = Category(name=category.name)
+    db.add(new_category)
+    await db.commit()
+    return {"message": "Category added successfully."}
+
+# カテゴリ削除
+@app.delete("/categories/{id}", status_code=200)
+async def delete_category(id: int, db: AsyncSession = get_db()):
+    async with db as session:
+        category = await session.get(Category, id)
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        await session.delete(category)
+        await session.commit()
+        return {"message": "Category deleted successfully."}
+
+# アイテムとカテゴリの関係追加
+@app.post("/itemcategory", status_code=201)
+async def add_itemcategory(item_id: int, category_id: int, db: AsyncSession = get_db()):
+    new_instance = ItemCategory(item_id=item_id, category_id=category_id)
+    db.add(new_instance)
+    await db.commit()
+    return {"message": "Tag added successfully."}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
