@@ -44,14 +44,14 @@ def hello():
     return "Hello from Flask!"
 
 @app.route('/items', methods=['GET'])
-def get_items():
+async def get_items():
     # items = Item.query.all()
     # item_dict={}
     # for item in items:
         # item_dict[item.id] = str(item.name)
         # item_dict[item.id] = {'name':str(item.name), '':str(item.create_time)}
     items = Item.query.options(joinedload(Item.categories)).all()
-    print(items)
+
     item_list = []
     for item in items:
         # print(item.id)
@@ -61,11 +61,10 @@ def get_items():
             'name': item.name,
             'categories': categories
         })
-    print(item_list)
     return jsonify(item_list)
 
 @app.route('/items', methods=['POST'])
-def add_item():
+async def add_item():
     name = request.json['name']
     item = Item(name=name)
     db.session.add(item)
@@ -74,7 +73,7 @@ def add_item():
     return jsonify({"message":"Item added successfully."}), 201
 
 @app.route('/items/<int:id>', methods=['DELETE'])
-def delete_item(id):
+async def delete_item(id):
     item = Item.query.get(id)
     if not item:
         return jsonify({"error": "Item not found"}), 402
@@ -83,9 +82,9 @@ def delete_item(id):
     return jsonify({"message":"Item deleted successfully."}), 201
 
 @app.route('/items/<int:id>', methods=['PUT'])
-def put_item(id):
+async def put_item(id):
     name = request.json['name']
-    item = Item.query.get(id)
+    item = await Item.query.get(id)
     if not item:
         return jsonify({"error": "Item not found"}), 402
     db.session.merge(item)
@@ -95,7 +94,7 @@ def put_item(id):
     return jsonify({"message":"Item updated successfully."}), 200
 
 @app.route('/categories', methods=['GET'])
-def get_categories():
+async def get_categories():
     categories = Category.query.all()
     category_dict={}
     for category in categories:
@@ -103,7 +102,7 @@ def get_categories():
     return jsonify(category_dict)
 
 @app.route('/categories', methods=['POST'])
-def add_category():
+async def add_category():
     name = request.json['name']
     category = Category(name=name)
     db.session.add(category)
@@ -111,7 +110,7 @@ def add_category():
     return jsonify({"message":"Category added successfully."}), 200
 
 @app.route('/categories/<int:id>', methods=['DELETE'])
-def delete_category(id):
+async def delete_category(id):
     category = Category.query.get(id)
     if not category:
         return jsonify({"error": "category not found"}), 402
@@ -121,7 +120,7 @@ def delete_category(id):
     return jsonify({"message":"Category deleted successfully."}), 201
 
 @app.route('/itemcategory', methods=['POST'])
-def add_itemcategory():
+async def add_itemcategory():
     item_id = request.json['item_id']
     category_id = request.json['category_id']
     newinstance = ItemCategory(item_id=item_id, category_id=category_id)
@@ -131,4 +130,4 @@ def add_itemcategory():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+const API_BASE_URL ="http://192.168.0.18:5000";
+
 
 function Test(props) {
   const [char, setChar] = useState('');
@@ -74,21 +76,20 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
 
-
   useEffect(() => {
     fetchItems();
     fetchCategories();
   }, []);
 
   const fetchItems = async () => {
-    const res = await fetch('http://localhost:5000/items');
+    const res = await fetch(`${API_BASE_URL}/items`);
     const data = await res.json();
     setItems(data);
   };
 
   const addItem = async () => {
     if (!newItem) return;
-    const res = await fetch('http://localhost:5000/items', {
+    const res = await fetch(`${API_BASE_URL}/items`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ export default function Home() {
   };
 
   const deleteItem = async (id) => {
-    const res = await fetch(`http://localhost:5000/items/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/items/${id}`, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -110,7 +111,7 @@ export default function Home() {
 
   const putItem = async (id, changeItem) => {
     if (!changeItem) return;
-    const res = await fetch(`http://localhost:5000/items/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/items/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -123,14 +124,14 @@ export default function Home() {
 
 
   const fetchCategories = async () => {
-    const res = await fetch('http://localhost:5000/categories');
+    const res = await fetch(`${API_BASE_URL}/categories`);
     const data = await res.json();
     setCategories(data);
   };
 
   const addCategory = async () => {
     if (!newCategory) return;
-    const res = await fetch('http://localhost:5000/categories', {
+    const res = await fetch(`${API_BASE_URL}/categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -143,7 +144,7 @@ export default function Home() {
   }
 
   const deleteCategory = async (id) => {
-    const res = await fetch(`http://localhost:5000/categories/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/categories/${id}`, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -152,7 +153,7 @@ export default function Home() {
 
   const addItemCategory = async (itemid, categoryid) => {
     if (!categoryid) return;
-    const res = await fetch('http://localhost:5000/itemcategory', {
+    const res = await fetch(`${API_BASE_URL}/itemcategory`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
