@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 
+// const API_BASE_URL ="http://192.168.0.18:5000";
+const API_BASE_URL ="http://localhost:8000";
+
 
 function Test(props) {
   const [char, setChar] = useState('');
@@ -17,7 +20,6 @@ function Test(props) {
     </div>
   )
 }
-
 
 function ShowData(props) {
   const [changeItem, setChangeItem] = useState([]);
@@ -68,12 +70,46 @@ function ShowData(props) {
   )
 }
 
+function KariData(props) {
+  const [changeItem, setChangeItem] = useState([]);
+  const [selectedValue, setSelectedValue] = useState<string>('');
+
+  // セレクトボックスの値が変更された時のハンドラー
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedValue(event.target.value);
+  };
+  
+  return(
+    <div>
+      <li> 
+        {/* アイテムの表示 */}
+        {props.item}
+        {props.id}
+        <br />
+        {/* 内容の変更 */}
+        <input
+        type="text"
+        value={changeItem}
+        onChange={(e) => setChangeItem(e.target.value)}
+        />
+        <button onClick={() => {props.putItem(props.id, changeItem); 
+                                setChangeItem('');}
+                        }>Change</button>
+         &nbsp;&nbsp;&nbsp;
+        {/* 内容の削除 */}
+        <button onClick={() => props.deleteItem(props.id)}>Delete</button>
+      
+      </li>
+
+    </div>
+  )
+}
+
 export default function Home() {
   const [items, setItems] = useState([]);
   const [newItem, setNewItem] = useState('');
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
-
 
   useEffect(() => {
     fetchItems();
@@ -81,14 +117,14 @@ export default function Home() {
   }, []);
 
   const fetchItems = async () => {
-    const res = await fetch('http://localhost:5000/items');
+    const res = await fetch(`${API_BASE_URL}/items`);
     const data = await res.json();
     setItems(data);
   };
 
   const addItem = async () => {
     if (!newItem) return;
-    const res = await fetch('http://localhost:5000/items', {
+    const res = await fetch(`${API_BASE_URL}/items`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,7 +137,7 @@ export default function Home() {
   };
 
   const deleteItem = async (id) => {
-    const res = await fetch(`http://localhost:5000/items/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/items/${id}`, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -110,7 +146,7 @@ export default function Home() {
 
   const putItem = async (id, changeItem) => {
     if (!changeItem) return;
-    const res = await fetch(`http://localhost:5000/items/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/items/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -123,14 +159,14 @@ export default function Home() {
 
 
   const fetchCategories = async () => {
-    const res = await fetch('http://localhost:5000/categories');
+    const res = await fetch(`${API_BASE_URL}/categories`);
     const data = await res.json();
     setCategories(data);
   };
 
   const addCategory = async () => {
     if (!newCategory) return;
-    const res = await fetch('http://localhost:5000/categories', {
+    const res = await fetch(`${API_BASE_URL}/categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -143,7 +179,7 @@ export default function Home() {
   }
 
   const deleteCategory = async (id) => {
-    const res = await fetch(`http://localhost:5000/categories/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/categories/${id}`, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -152,7 +188,7 @@ export default function Home() {
 
   const addItemCategory = async (itemid, categoryid) => {
     if (!categoryid) return;
-    const res = await fetch('http://localhost:5000/itemcategory', {
+    const res = await fetch(`${API_BASE_URL}/itemcategory`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -169,13 +205,23 @@ export default function Home() {
       <h1>Next.js + Flask + SQLite</h1>
       {/* todoリストの表示 */}
       <ul>
-        {Object.values(items).map((item, index) => (
+        {/* {Object.values(items).map((item, index) => (
           <ShowData 
             item={item}
+            id = {item.id}
             categories={categories}
             putItem={putItem}
             deleteItem={deleteItem}
             addItemCategory={addItemCategory}
+          />
+          // <li>{item}</li>
+        ))} */}
+        {Object.keys(items).map(key => (
+          <KariData
+            item={items[key]}
+            id = {key}
+            putItem={putItem}
+            deleteItem={deleteItem}
           />
         ))}
       </ul>
@@ -218,5 +264,4 @@ export default function Home() {
     </div>
   );
 }
-
 
