@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
-// const API_BASE_URL ="http://192.168.0.18:5000";
-const API_BASE_URL ="http://localhost:8000";
+const API_BASE_URL ="http://192.168.0.18:8000";
+// const API_BASE_URL ="http://localhost:8000";
 
 
 function Test(props) {
@@ -70,7 +70,7 @@ function ShowData(props) {
   )
 }
 
-function KariData(props) {
+function Show_idname_Data(props) {
   const [changeItem, setChangeItem] = useState([]);
   const [selectedValue, setSelectedValue] = useState<string>('');
 
@@ -205,7 +205,7 @@ export default function Home() {
       <h1>Next.js + Flask + SQLite</h1>
       {/* todoリストの表示 */}
       <ul>
-        {/* {Object.values(items).map((item, index) => (
+        {Object.values(items).map((item, index) => (
           <ShowData 
             item={item}
             id = {item.id}
@@ -215,15 +215,15 @@ export default function Home() {
             addItemCategory={addItemCategory}
           />
           // <li>{item}</li>
-        ))} */}
-        {Object.keys(items).map(key => (
-          <KariData
+        ))}
+        {/* {Object.keys(items).map(key => (
+          <Show_idname_Data
             item={items[key]}
             id = {key}
             putItem={putItem}
             deleteItem={deleteItem}
           />
-        ))}
+        ))} */}
       </ul>
       {/* 内容の追加 */}
       <input
